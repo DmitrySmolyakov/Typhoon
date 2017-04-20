@@ -59,11 +59,11 @@
     }
     else if (definition.initializer == nil)
     {
-        instance = objc_msgSend(instance, @selector(init));
+        instance = ((id (*)(id, SEL))objc_msgSend)(instance, @selector(init));
     }
 
     [self resolvePropertyDependenciesOn:instance definition:definition];
-    
+
     return instance;
 }
 
@@ -72,10 +72,10 @@
 - (void)resolvePropertyDependenciesOn:(__autoreleasing id)instance definition:(TyphoonDefinition *)definition
 {
     [self markCurrentlyResolvingDefinition:definition withInstance:instance];
-    
+
     [self injectPropertyDependenciesOn:instance withDefinition:definition];
     [self injectCircularDependenciesOn:instance];
-    
+
     [self markDoneResolvingDefinition:definition];
 }
 
@@ -96,8 +96,8 @@
         if (typeDescriptor == nil)
         {
             [NSException raise:NSInvalidArgumentException
-                    format:@"Tried to inject property '%@' on object of type '%@', but the instance has no setter for this property.",
-                           property.name, [instance class]];
+                        format:@"Tried to inject property '%@' on object of type '%@', but the instance has no setter for this property.",
+             property.name, [instance class]];
         }
         [self doPropertyInjection:instance property:property typeDescriptor:typeDescriptor];
     }
@@ -113,7 +113,7 @@
     }
     if ([instance respondsToSelector:definition.beforePropertyInjection])
     {
-        objc_msgSend(instance, definition.beforePropertyInjection);
+        ((id (*)(id, SEL))objc_msgSend)(instance, definition.beforePropertyInjection);
     }
 }
 
@@ -195,7 +195,7 @@
     NSMutableDictionary* circularDependentProperties = [instance circularDependentProperties];
     for (NSString* propertyName in [circularDependentProperties allKeys])
     {
-        id propertyValue = objc_msgSend(instance, NSSelectorFromString(propertyName));
+        id propertyValue = ((id (*)(id, SEL))objc_msgSend)(instance, NSSelectorFromString(propertyName));
         if (!propertyValue)
         {
             SEL pSelector = [instance setterForPropertyWithName:propertyName];
@@ -219,7 +219,7 @@
     }
     if ([instance respondsToSelector:definition.afterPropertyInjection])
     {
-        objc_msgSend(instance, definition.afterPropertyInjection);
+        ((id (*)(id, SEL))objc_msgSend)(instance, definition.afterPropertyInjection);
     }
 }
 
@@ -263,7 +263,7 @@
 
 /* ====================================================================================================================================== */
 - (void)setArgumentFor:(NSInvocation*)invocation index:(NSUInteger)index1 textValue:(NSString*)textValue
-        requiredType:(TyphoonTypeDescriptor*)requiredType
+          requiredType:(TyphoonTypeDescriptor*)requiredType
 {
     if (requiredType.isPrimitive)
     {
@@ -279,7 +279,7 @@
 }
 
 - (id)buildCollectionFor:(TyphoonPropertyInjectedAsCollection*)propertyInjectedAsCollection
-        instance:(id <TyphoonIntrospectiveNSObject>)instance
+                instance:(id <TyphoonIntrospectiveNSObject>)instance
 {
     id collection = [self collectionFor:propertyInjectedAsCollection givenInstance:instance];
 
@@ -301,12 +301,12 @@
         }
     }
     BOOL isMutable = propertyInjectedAsCollection.injectionType == TyphoonCollectionTypeNSMutableArray ||
-            propertyInjectedAsCollection.injectionType == TyphoonCollectionTypeNSMutableSet;
+    propertyInjectedAsCollection.injectionType == TyphoonCollectionTypeNSMutableSet;
     return propertyInjectedAsCollection.injectionType == isMutable ? [collection copy] : collection;
 }
 
 - (id)collectionFor:(TyphoonPropertyInjectedAsCollection*)propertyInjectedAsCollection
-        givenInstance:(id <TyphoonIntrospectiveNSObject>)instance
+      givenInstance:(id <TyphoonIntrospectiveNSObject>)instance
 {
     TyphoonCollectionType type = [propertyInjectedAsCollection resolveCollectionTypeWith:instance];
     id collection;
@@ -333,14 +333,14 @@
     if ([candidates count] == 0)
     {
         if (class_isMetaClass(object_getClass(classOrProtocol)) &&
-                [classOrProtocol respondsToSelector:@selector(typhoonAutoInjectedProperties)])
+            [classOrProtocol respondsToSelector:@selector(typhoonAutoInjectedProperties)])
         {
             LogTrace(@"Class %@ wants auto-wiring. . . registering.", NSStringFromClass(classOrProtocol));
             [self register:[TyphoonDefinition withClass:classOrProtocol]];
             return [self definitionForType:classOrProtocol];
         }
         [NSException raise:NSInvalidArgumentException format:@"No components defined which satisify type: '%@'",
-                                                             TyphoonTypeStringFor(classOrProtocol)];
+         TyphoonTypeStringFor(classOrProtocol)];
     }
     if ([candidates count] > 1)
     {

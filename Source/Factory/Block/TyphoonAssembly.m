@@ -49,7 +49,7 @@ static NSMutableDictionary *resolveStackForKey;
         [self provideDynamicImplementationToConstructDefinitionForSEL:sel];
         return YES;
     }
-    
+
     return [super resolveInstanceMethod:sel];
 }
 
@@ -72,11 +72,11 @@ static NSMutableDictionary *resolveStackForKey;
 
 + (IMP)implementationToConstructDefinitionForSEL:(SEL)selWithAdvicePrefix
 {
-    return imp_implementationWithBlock((__bridge id) objc_unretainedPointer((TyphoonDefinition *)^(id me)
-       {
-           NSString *key = [TyphoonAssemblySelectorWrapper keyForWrappedSEL:selWithAdvicePrefix];
-           return [self definitionForKey:key me:me];
-       }));
+    return imp_implementationWithBlock((__bridge id) (__bridge void *)((TyphoonDefinition *)^(id me)
+                                                                       {
+                                                                           NSString *key = [TyphoonAssemblySelectorWrapper keyForWrappedSEL:selWithAdvicePrefix];
+                                                                           return [self definitionForKey:key me:me];
+                                                                       }));
 }
 
 + (TyphoonDefinition *)definitionForKey:(NSString *)key me:(id)me
@@ -89,7 +89,7 @@ static NSMutableDictionary *resolveStackForKey;
         LogTrace(@"Definition for key: '%@' is not cached, building...", key);
         return [self buildDefinitionForKey:key me:me];
     }
-        
+
     LogTrace(@"Using cached definition for key '%@.'", key);
     return cached;
 }
@@ -103,16 +103,16 @@ static NSMutableDictionary *resolveStackForKey;
 {
     NSMutableArray *resolveStack = [self resolveStackForKey:key];
     [self markCurrentlyResolvingKey:key resolveStack:resolveStack];
-    
+
     if ([self dependencyForKey:key involvedInCircularDependencyInResolveStack:resolveStack]) {
         return [self definitionToTerminateCircularDependencyForKey:key];
     }
-    
+
     id cached = [self populateCacheWithDefinitionForKey:key me:me];
     [self markKeyResolved:key resolveStack:resolveStack];
-    
+
     LogTrace(@"Did finish building definition for key: '%@'", key);
-    
+
     return cached;
 }
 
@@ -128,7 +128,7 @@ static NSMutableDictionary *resolveStackForKey;
             return YES;
         }
     }
-    
+
     return NO;
 }
 
@@ -163,7 +163,7 @@ static NSMutableDictionary *resolveStackForKey;
 + (id)definitionByCallingAssemblyMethodForKey:(NSString *)key me:(TyphoonAssembly *)me
 {
     SEL sel = [TyphoonAssemblySelectorWrapper wrappedSELForKey:key];
-    id cached = objc_msgSend(me, sel); // the wrappedSEL will call through to the original, unwrapped implementation because of the active swizzling.
+    id cached = ((id (*)(id, SEL))objc_msgSend)(me, sel); // the wrappedSEL will call through to the original, unwrapped implementation because of the active swizzling.
     return cached;
 }
 
@@ -173,7 +173,7 @@ static NSMutableDictionary *resolveStackForKey;
     {
         TyphoonDefinition* definition = (TyphoonDefinition*) cached;
         [self setKey:key onDefinitionIfExistingKeyEmpty:definition];
-        
+
         [[me cachedDefinitionsForMethodName] setObject:definition forKey:key];
     }
 }

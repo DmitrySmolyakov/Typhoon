@@ -37,10 +37,10 @@ static NSMutableArray* swizzleRegistry;
 {
     if ([super resolveInstanceMethod:sel] == NO)
     {
-        IMP imp = imp_implementationWithBlock((__bridge id) objc_unretainedPointer(^(id me)
-        {
-            return [me componentForKey:NSStringFromSelector(sel)];
-        }));
+        IMP imp = imp_implementationWithBlock((__bridge id) (__bridge void *)(^(id me)
+                                                                              {
+                                                                                  return [me componentForKey:NSStringFromSelector(sel)];
+                                                                              }));
         class_addMethod(self, sel, imp, "@");
         return YES;
     }
@@ -69,7 +69,7 @@ static NSMutableArray* swizzleRegistry;
     if (![assembly isKindOfClass:[TyphoonAssembly class]])
     {
         [NSException raise:NSInvalidArgumentException format:@"Class '%@' is not a sub-class of %@", NSStringFromClass([assembly class]),
-                                                             NSStringFromClass([TyphoonAssembly class])];
+         NSStringFromClass([TyphoonAssembly class])];
     }
     self = [super init];
     if (self)
@@ -90,11 +90,11 @@ static NSMutableArray* swizzleRegistry;
     @synchronized (self)
     {
         NSSet *definitionSelectors = [self obtainDefinitionSelectors:assembly];
-        
+
         [definitionSelectors enumerateObjectsUsingBlock:^(id obj, BOOL *stop) {
-            objc_msgSend(assembly, (SEL)[obj pointerValue]);
+            ((id (*)(id, SEL))objc_msgSend)(assembly, (SEL)[obj pointerValue]);
         }];
-        
+
         NSMutableDictionary* dictionary = [assembly cachedDefinitionsForMethodName];
         return [dictionary allValues];
     }
@@ -174,7 +174,7 @@ typedef void(^MethodEnumerationBlock)(Method method);
         if (![swizzleRegistry containsObject:[assembly class]])
         {
             [swizzleRegistry addObject:[assembly class]];
-            
+
             NSSet *definitionSelectors = [self obtainDefinitionSelectors:assembly];
             [definitionSelectors enumerateObjectsUsingBlock:^(id obj, BOOL *stop) {
                 [self replaceImplementationOfDefinitionOnAssembly:assembly withDynamicBeforeAdviceImplementation:obj];
