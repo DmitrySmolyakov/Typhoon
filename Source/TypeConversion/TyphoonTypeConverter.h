@@ -14,6 +14,7 @@
 
 @class TyphoonTypeDescriptor;
 
+
 /**
 * Declares a contract for converting configuration arguments to their required runtime type.
 */
